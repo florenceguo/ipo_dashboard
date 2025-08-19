@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>图表测试</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <h2>板块涨跌幅图表测试</h2>
+    <canvas id="testChart" width="400" height="200"></canvas>
+    
+    <script>
+        // 模拟数据测试
+        const testData = [
+            {"week_label": "24W02", "上证主板": 0.4369, "创业板": null, "北交所": 1.6631, "深证主板": 1.1352, "科创板": null},
+            {"week_label": "24W03", "上证主板": 0.3710, "创业板": 1.9203, "北交所": 0.6045, "深证主板": 0.4270, "科创板": null},
+            {"week_label": "24W04", "上证主板": 0.5440, "创业板": 0.8880, "北交所": 0.6130, "深证主板": null, "科创板": null}
+        ];
+        
+        console.log('测试数据:', testData);
+        
+        const sectors = ['上证主板', '深证主板', '科创板', '创业板', '北交所'];
+        const monthlyData = {};
+        
+        testData.forEach(item => {
+            if (!item.week_label) return;
+            
+            const yearSuffix = item.week_label.substring(0, 2);
+            const weekNum = parseInt(item.week_label.substring(3));
+            const year = 2000 + parseInt(yearSuffix);
+            const month = Math.ceil(weekNum / 4.33);
+            const monthKey = `${year}-${month.toString().padStart(2, '0')}`;
+            
+            console.log(`${item.week_label} -> ${monthKey}`);
+            
+            if (!monthlyData[monthKey]) {
+                monthlyData[monthKey] = {};
+                sectors.forEach(sector => {
+                    monthlyData[monthKey][sector] = [];
+                });
+            }
+            
+            sectors.forEach(sector => {
+                const value = item[sector];
+                if (value !== null && value !== undefined && !isNaN(value)) {
+                    monthlyData[monthKey][sector].push(value);
+                }
+            });
+        });
+        
+        console.log('月度数据:', monthlyData);
+        
+        const months = Object.keys(monthlyData).sort();
+        console.log('月份:', months);
+        
+        const datasets = sectors.map((sector, index) => {
+            const colors = ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF'];
+            const data = months.map(month => {
+                const values = monthlyData[month][sector];
+                if (values.length === 0) return null;
+                const avg = values.reduce((a, b) => a + b, 0) / values.length;
+                return avg * 100;
+            });
+            
+            console.log(`${sector} 数据:`, data);
+            
+            return {
+                label: sector,
+                data: data,
+                borderColor: colors[index],
+                backgroundColor: colors[index] + '20',
+                fill: false,
+                tension: 0.4,
+                spanGaps: false,
+                pointRadius: data.map(val => val === null ? 0 : 4)
+            };
+        });
+        
+        new Chart(document.getElementById('testChart'), {
+            type: 'line',
+            data: { labels: months, datasets: datasets },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: { position: 'top' },
+                    tooltip: {
+                        filter: function(tooltipItem) { return tooltipItem.parsed.y !== null; },
+                        callbacks: {
+                            label: function(context) {
+                                return context.dataset.label + ': ' + context.parsed.y.toFixed(2) + '%';
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: { callback: function(value) { return value + '%'; } }
+                    }
+                }
+            }
+        });
+    </script>
+</body>
+</html>
+
